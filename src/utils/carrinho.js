@@ -1,8 +1,40 @@
 // O carrinho guarda uma entrada por unidade adicionada.
 // Ex.: duas camisetas iguais = o mesmo produto duas vezes no array.
 
+export function parsearPreco(valor) {
+  if (valor === null || valor === undefined || String(valor).trim() === '') return Number.NaN
+
+  const texto = String(valor).trim()
+
+  if (texto.includes(',') && texto.includes('.')) {
+    return Number(texto.replace(/\./g, '').replace(',', '.'))
+  }
+
+  if (texto.includes(',')) {
+    return Number(texto.replace(',', '.'))
+  }
+
+  return Number(texto)
+}
+
+export function normalizarPreco(valor) {
+  const numero = parsearPreco(valor)
+  return Number.isFinite(numero) ? numero : 0
+}
+
+export function produtoComPrecoValido(produto) {
+  if (!produto) return false
+
+  const valor = produto.price
+  if (valor === null || valor === undefined || String(valor).trim() === '') return false
+
+  const numero = parsearPreco(valor)
+  return Number.isFinite(numero)
+}
+
 export function calcularTotal(carrinho) {
-  return carrinho.reduce((total, produto) => total + produto.price, 0)
+  const total = carrinho.reduce((acumulado, produto) => acumulado + normalizarPreco(produto.price), 0)
+  return Number(total.toFixed(2))
 }
 
 export function agruparItens(carrinho) {

@@ -5,7 +5,14 @@ import { agruparItens, calcularTotal } from '../utils/carrinho'
 import { validarCupom } from '../utils/cupons'
 import { formatarPreco } from '../utils/formatarPreco'
 
-export default function Carrinho({ carrinho, produtos, clienteAtual, onAdicionar, onRemover }) {
+export default function Carrinho({
+  carrinho,
+  produtos,
+  clienteAtual,
+  onAdicionar,
+  onRemover,
+  onRemoverTodos,
+}) {
   const [codigoCupom, setCodigoCupom] = useState('')
   const [cupomAplicado, setCupomAplicado] = useState(null)
   const [mensagemCupom, setMensagemCupom] = useState('')
@@ -13,9 +20,10 @@ export default function Carrinho({ carrinho, produtos, clienteAtual, onAdicionar
   const itens = agruparItens(carrinho)
   const total = calcularTotal(carrinho)
   const totalComDesconto = cupomAplicado ? total * (1 - cupomAplicado.desconto) : total
+  const restanteParaFreteGratis = Math.max(0, 200 - totalComDesconto)
 
   const sugestoes = produtos
-    .filter((produto) => !carrinho.find((item) => item.id === produto.id))
+    .filter((produto) => produto.estoque > 0 && !carrinho.find((item) => item.id === produto.id))
     .slice(0, 3)
 
   function aplicarCupom(evento) {
@@ -58,12 +66,17 @@ export default function Carrinho({ carrinho, produtos, clienteAtual, onAdicionar
               </div>
               <div className="item-info">
                 <p className="item-titulo">{item.produto.title}</p>
-                <p className="item-preco">R$ {item.produto.price}</p>
+                <p className="item-preco">{formatarPreco(item.produto.price)}</p>
               </div>
               <span className="item-quantidade">{item.quantidade} un.</span>
-              <button className="botao-texto" onClick={() => onRemover(item.produto.id)}>
-                Remover 1
-              </button>
+              <div className="acoes-item-carrinho">
+                <button className="botao-texto" onClick={() => onRemover(item.produto.id)}>
+                  Remover 1
+                </button>
+                <button className="botao-texto" onClick={() => onRemoverTodos(item.produto.id)}>
+                  Remover tudo
+                </button>
+              </div>
             </li>
           ))}
         </ul>
@@ -93,6 +106,21 @@ export default function Carrinho({ carrinho, produtos, clienteAtual, onAdicionar
               <span>{cupomAplicado.desconto * 100}%</span>
             </p>
           )}
+
+          {restanteParaFreteGratis > 0 && (
+            <p className="resumo-linha">
+              <span>Frete</span>
+              <span>Faltam {formatarPreco(restanteParaFreteGratis)}</span>
+            </p>
+          )}
+
+          {restanteParaFreteGratis === 0 && (
+            <p className="resumo-linha">
+              <span>Frete</span>
+              <span>Grátis</span>
+            </p>
+          )}
+
           <p className="total">
             <span>Total</span>
             <span>{formatarPreco(totalComDesconto)}</span>

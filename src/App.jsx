@@ -9,6 +9,7 @@ import Carrinho from './pages/Carrinho'
 import Estoque from './pages/Estoque'
 import { buscarProdutos } from './services/produtos'
 import { buscarClientes } from './services/clientes'
+import { produtoComPrecoValido } from './utils/carrinho'
 
 export default function App() {
   const [produtos, setProdutos] = useState([])
@@ -17,6 +18,7 @@ export default function App() {
   const [carrinho, setCarrinho] = useState([])
   const [clientes, setClientes] = useState([])
   const [clienteAtualId, setClienteAtualId] = useState(null)
+  const [listaEspera, setListaEspera] = useState([])
 
   useEffect(() => {
     buscarProdutos()
@@ -31,21 +33,48 @@ export default function App() {
   }, [])
 
   function adicionarAoCarrinho(produto) {
-    setCarrinho(carrinho.concat(produto))
+    if (!produtoComPrecoValido(produto) || produto.estoque === 0) return
+
+    setCarrinho((carrinhoAtual) => carrinhoAtual.concat(produto))
+  }
+
+  function registrarInteresse({ produtoId, nome, email }) {
+    if (!produtoId || !nome || !email) return false
+
+    setListaEspera((interessadosAtuais) => {
+      const jaCadastrado = interessadosAtuais.some(
+        (interesse) =>
+          interesse.produtoId === produtoId &&
+          interesse.email.toLowerCase() === email.trim().toLowerCase()
+      )
+
+      if (jaCadastrado) return interessadosAtuais
+
+      return [
+        ...interessadosAtuais,
+        {
+          produtoId,
+          nome: nome.trim(),
+          email: email.trim().toLowerCase(),
+        },
+      ]
+    })
+
+    return true
   }
 
   function removerUmaUnidade(produtoId) {
-    // Remove só a primeira unidade encontrada do produto
-    let removido = false
-    setCarrinho(
-      carrinho.filter((produto) => {
-        if (!removido && produto.id === produtoId) {
-          removido = true
-          return false
-        }
-        return true
-      })
-    )
+    setCarrinho((carrinhoAtual) => {
+      const indicePrimeiro = carrinhoAtual.findIndex((produto) => produto.id === produtoId)
+
+      if (indicePrimeiro === -1) return carrinhoAtual
+
+      return carrinhoAtual.filter((produto, indice) => indice !== indicePrimeiro)
+    })
+  }
+
+  function removerTodosDoProduto(produtoId) {
+    setCarrinho((carrinhoAtual) => carrinhoAtual.filter((produto) => produto.id !== produtoId))
   }
 
   const clienteAtual = clientes.find((cliente) => cliente.id === clienteAtualId)
@@ -67,7 +96,14 @@ export default function App() {
             />
             <Route
               path="/produto/:id"
-              element={<PaginaProduto produtos={produtos} onAdicionar={adicionarAoCarrinho} />}
+              element={
+                <PaginaProduto
+                  produtos={produtos}
+                  clienteAtual={clienteAtual}
+                  onAdicionar={adicionarAoCarrinho}
+                  onRegistrarListaEspera={registrarInteresse}
+                />
+              }
             />
             <Route
               path="/carrinho"
@@ -78,10 +114,11 @@ export default function App() {
                   clienteAtual={clienteAtual}
                   onAdicionar={adicionarAoCarrinho}
                   onRemover={removerUmaUnidade}
+                  onRemoverTodos={removerTodosDoProduto}
                 />
               }
             />
-            <Route path="/estoque" element={<Estoque produtos={produtos} />} />
+            <Route path="/estoque" element={<Estoque produtos={produtos} listaEspera={listaEspera} />} />
           </Routes>
         )}
       </main>
